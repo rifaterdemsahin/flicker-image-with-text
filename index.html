@@ -131,3 +131,39 @@
         const pBar = document.getElementById('pBar');
         const pFill = document.getElementById('progress-fill');
         const status = document.getElementById('status');
+
+        pBar.style.display = 'block';
+        
+        for (let i = 0; i < totalFrames; i++) {
+            // Flicker logic
+            const isOff = Math.random() < chance;
+            target.style.opacity = isOff ? "0" : "1";
+
+            const canvas = await html2canvas(target, { 
+                backgroundColor: null,
+                scale: 2 
+            });
+            
+            const dataUrl = canvas.toDataURL("image/png").split(',')[1];
+            const fileName = `frame_${String(i).padStart(3, '0')}.png`;
+            folder.file(fileName, dataUrl, {base64: true});
+
+            const percent = Math.round((i / totalFrames) * 100);
+            pFill.style.width = percent + "%";
+            status.innerText = `Processing Frame ${i} of ${totalFrames}...`;
+        }
+
+        status.innerText = "Finalizing ZIP file...";
+        const content = await zip.generateAsync({type:"blob"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `${safeName}_sequence.zip`;
+        link.click();
+
+        target.style.opacity = "1";
+        status.innerText = "Export Complete!";
+        pBar.style.display = 'none';
+    }
+</script>
+</body>
+</html>
