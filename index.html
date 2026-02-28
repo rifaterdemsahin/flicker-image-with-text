@@ -3,85 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>12K Resolve Sequence Generator</title>
+    <title>12K Smooth Flicker Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        :root { --bg: #0a0a0a; --card: #151515; --accent: #00d4ff; --text: #ececec; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; padding-bottom: 50px; }
+        :root { --bg: #0d0d0d; --card: #1a1a1a; --accent: #00ffaa; --text: #f0f0f0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; padding-bottom: 50px; }
         
-        .ui-header { width: 100%; padding: 20px; background: #000; border-bottom: 1px solid #333; text-align: center; font-weight: 900; letter-spacing: 2px; }
+        .ui-header { width: 100%; padding: 15px; background: #000; border-bottom: 1px solid #333; text-align: center; font-weight: 900; color: var(--accent); }
         
-        .editor-grid { display: grid; grid-template-columns: 350px 1fr; gap: 20px; width: 95%; max-width: 1200px; margin-top: 20px; }
+        .editor-grid { display: grid; grid-template-columns: 360px 1fr; gap: 20px; width: 95%; max-width: 1300px; margin-top: 20px; }
 
-        .controls { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #333; height: fit-content; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .controls { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #333; height: fit-content; }
 
-        .control-group { margin-bottom: 18px; display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 10px; color: #777; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
-        input, select { background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; }
-        input:focus { border-color: var(--accent); outline: none; }
+        .control-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 10px; color: #999; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+        input, select { background: #050505; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; }
 
         .preview-space { 
-            background: repeating-conic-gradient(#1a1a1a 0% 25%, #111 0% 50%) 50% / 40px 40px;
+            background: repeating-conic-gradient(#151515 0% 25%, #0a0a0a 0% 50%) 50% / 30px 30px;
             border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            border: 1px solid #333; min-height: 500px; overflow: hidden;
+            border: 1px solid #333; min-height: 550px; overflow: hidden;
         }
 
-        #capture-target { padding: 40px; text-align: center; }
-        #target-img { max-width: 350px; height: auto; display: block; margin: 0 auto 20px; }
+        #capture-target { padding: 40px; text-align: center; transition: opacity 0.05s ease; }
+        #target-img { max-width: 320px; height: auto; display: block; margin: 0 auto 20px; }
         #target-text { font-size: 4rem; font-weight: 900; line-height: 1; text-transform: uppercase; }
 
         .btn-main { 
             width: 100%; padding: 16px; background: var(--accent); color: #000; 
             border: none; border-radius: 8px; font-weight: 900; cursor: pointer; 
-            margin-top: 10px; text-transform: uppercase; transition: 0.3s;
+            text-transform: uppercase; transition: 0.3s;
         }
-        .btn-main:hover { transform: scale(1.02); filter: brightness(1.1); }
         
         .progress-bar { width: 100%; height: 6px; background: #222; margin-top: 15px; border-radius: 10px; overflow: hidden; display: none; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); box-shadow: 0 0 15px var(--accent); }
 
-        /* Resolve Guide */
-        .resolve-guide {
-            width: 95%; max-width: 1200px; margin-top: 40px; background: #111;
-            padding: 25px; border-radius: 12px; border-left: 5px solid var(--accent);
-        }
-        .resolve-guide h3 { margin-top: 0; color: var(--accent); font-size: 1.2rem; }
-        .resolve-guide ol { padding-left: 20px; color: #bbb; line-height: 1.6; }
-        .resolve-guide code { background: #222; padding: 2px 6px; border-radius: 4px; color: #fff; }
+        .guide { width: 95%; max-width: 1300px; margin-top: 30px; color: #888; font-size: 13px; line-height: 1.6; }
+        .guide strong { color: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="ui-header">12K IMAGE SEQUENCE GENERATOR</div>
+<div class="ui-header">PRO SIGNAL FLICKER (RESOLVE SEQUENCE)</div>
 
 <div class="editor-grid">
     <div class="controls">
         <div class="control-group">
-            <label>1. Upload Asset</label>
+            <label>Asset Upload</label>
             <input type="file" id="imgFile" accept="image/*" onchange="previewImg(event)">
         </div>
         <div class="control-group">
-            <label>2. Overlay Text (Zip Name)</label>
-            <input type="text" id="txtInput" value="DANGER" oninput="sync()">
+            <label>Overlay Text</label>
+            <input type="text" id="txtInput" value="SIGNAL LOST" oninput="sync()">
         </div>
         <div class="control-group">
-            <label>3. Duration & FPS</label>
+            <label>Duration / FPS</label>
             <div style="display:flex; gap:10px;">
                 <input type="number" id="duration" value="4" style="width:50%;">
                 <select id="fps" style="width:50%;">
                     <option value="24">24 FPS</option>
                     <option value="30">30 FPS</option>
-                    <option value="60">60 FPS</option>
                 </select>
             </div>
         </div>
         <div class="control-group">
-            <label>4. Flicker Probability</label>
-            <input type="range" id="intensity" min="5" max="60" value="20">
+            <label>Flicker Speed (Frequency)</label>
+            <input type="range" id="freq" min="1" max="20" value="10">
+        </div>
+        <div class="control-group">
+            <label>Flicker Smoothness (Falloff)</label>
+            <input type="range" id="smoothness" min="0" max="100" value="50">
         </div>
 
-        <button class="btn-main" onclick="exportSequence()">📦 Generate Resolve Sequence</button>
+        <button class="btn-main" onclick="exportSequence()">📦 Export Image Sequence</button>
         <div class="progress-bar" id="pBar"><div id="progress-fill"></div></div>
         <p id="status" style="font-size: 11px; color: #666; text-align: center; margin-top: 10px;"></p>
     </div>
@@ -89,20 +84,18 @@
     <div class="preview-space">
         <div id="capture-target">
             <img id="target-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
-            <div id="target-text">DANGER</div>
+            <div id="target-text">SIGNAL LOST</div>
         </div>
     </div>
 </div>
 
-<div class="resolve-guide">
-    ### 🎞️ DaVinci Resolve Import Guide
-    <ol>
-        <li><strong>Unzip the Download:</strong> Extract the folder named <code>[YourText]_sequence</code>.</li>
-        <li><strong>Media Pool Import:</strong> Open Resolve, go to the <strong>Media</strong> tab or <strong>Edit</strong> tab.</li>
-        <li><strong>Locate Sequence:</strong> In the Media Storage browser, find the folder. Resolve will display it as a <strong>single file</strong> (e.g., <code>frame_[000-095].png</code>).</li>
-        <li><strong>Verify Frame Rate:</strong> Right-click the item in the Media Pool > <code>Clip Attributes</code>. Ensure the <strong>Frame Rate</strong> matches your project (e.g., 24fps).</li>
-        <li><strong>Place on Timeline:</strong> Drag the sequence onto a track above your footage. The transparency is baked in!</li>
-    </ol>
+<div class="guide">
+    ### 🎞️ Importing to DaVinci Resolve
+    1. Extract the <strong>.zip</strong>. You will see a folder of numbered PNGs. 
+    2. In Resolve's <strong>Media Storage</strong>, right-click the folder and select <strong>"Import as Sequence"</strong>.
+    3. If Resolve imports them as 100 individual photos, go to the Media Pool options (three dots) and ensure <strong>"Show Individual Frames"</strong> is <strong>OFF</strong>.
+    4. Drag the resulting clip to your timeline. It will treat the sequence as a single 4-second video with transparency.
+    
 </div>
 
 <script>
@@ -126,38 +119,48 @@
         const seconds = parseInt(document.getElementById('duration').value);
         const fps = parseInt(document.getElementById('fps').value);
         const totalFrames = seconds * fps;
-        const chance = parseInt(document.getElementById('intensity').value) / 100;
+        
+        const freq = parseInt(document.getElementById('freq').value);
+        const smoothVal = parseInt(document.getElementById('smoothness').value) / 100;
 
         const pBar = document.getElementById('pBar');
         const pFill = document.getElementById('progress-fill');
         const status = document.getElementById('status');
-
         pBar.style.display = 'block';
-        
-        for (let i = 0; i < totalFrames; i++) {
-            // Flicker logic
-            const isOff = Math.random() < chance;
-            target.style.opacity = isOff ? "0" : "1";
 
-            const canvas = await html2canvas(target, { 
-                backgroundColor: null,
-                scale: 2 
-            });
+        for (let i = 0; i < totalFrames; i++) {
+            // SMOOTH FLICKER LOGIC:
+            // Uses a sine wave combined with a noise factor
+            const time = i / fps;
+            const sineWave = Math.sin(time * freq * Math.PI);
+            const noise = Math.random() - 0.5;
             
+            // Blend between hard cuts and smooth waves based on slider
+            let opacity = (sineWave + 1) / 2; // Normalize to 0-1
+            if (smoothVal < 0.3) {
+                opacity = opacity > 0.5 ? 1 : 0; // Hard cut
+            } else {
+                // Mix in randomness for "stutter"
+                opacity = (opacity * smoothVal) + ((Math.random() > 0.8 ? 0 : 1) * (1 - smoothVal));
+            }
+
+            target.style.opacity = opacity.toFixed(2);
+
+            const canvas = await html2canvas(target, { backgroundColor: null, scale: 2 });
             const dataUrl = canvas.toDataURL("image/png").split(',')[1];
             const fileName = `frame_${String(i).padStart(3, '0')}.png`;
             folder.file(fileName, dataUrl, {base64: true});
 
             const percent = Math.round((i / totalFrames) * 100);
             pFill.style.width = percent + "%";
-            status.innerText = `Processing Frame ${i} of ${totalFrames}...`;
+            status.innerText = `Smoothing & Rendering: ${percent}%`;
         }
 
-        status.innerText = "Finalizing ZIP file...";
+        status.innerText = "Bundling for Resolve...";
         const content = await zip.generateAsync({type:"blob"});
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
-        link.download = `${safeName}_sequence.zip`;
+        link.download = `${safeName}_smooth_sequence.zip`;
         link.click();
 
         target.style.opacity = "1";
