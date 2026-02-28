@@ -3,214 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>12K Sprite Flicker Studio</title>
+    <title>12K Resolve Sequence Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        :root {
-            --ui-bg: #0f0f0f;
-            --ui-card: #1a1a1a;
-            --accent: #00ff88;
-            --border: #333;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--ui-bg);
-            color: white;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-bottom: 100px;
-        }
-
-        /* Control Panel */
-        .panel {
-            background: var(--ui-card);
-            padding: 25px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 800px;
-            margin: 20px 0;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-            border: 1px solid var(--border);
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-        }
-
-        .group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: bold; }
-        input, select { 
-            background: #000; border: 1px solid var(--border); 
-            color: white; padding: 10px; border-radius: 5px; 
-        }
-
-        /* Preview Canvas */
-        #render-target {
-            padding: 40px;
-            background: repeating-conic-gradient(#222 0% 25%, #111 0% 50%) 50% / 20px 20px;
-            border-radius: 8px;
-            display: inline-block;
-            text-align: center;
-            margin: 40px 0;
-        }
-
-        .content-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-
-        #preview-img { max-width: 300px; max-height: 300px; object-fit: contain; }
-        #preview-text { font-size: 2.5rem; font-weight: 900; text-transform: uppercase; }
-
-        /* Animation Keyframes */
-        @keyframes flicker {
-            0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
-            20%, 24%, 55% { opacity: 0.1; }
-        }
-
-        .flicker-active { animation: flicker 0.5s infinite; }
-
-        button {
-            grid-column: 1 / -1;
-            padding: 15px;
-            background: var(--accent);
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        :root { --bg: #0a0a0a; --card: #151515; --accent: #ff3e3e; --text: #ececec; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; }
         
-        #sprite-preview-container {
-            width: 90%;
-            overflow-x: auto;
-            background: #000;
-            padding: 20px;
-            border: 1px solid var(--accent);
-            display: none;
+        .ui-header { width: 100%; padding: 20px; background: #000; border-bottom: 1px solid #333; text-align: center; }
+        
+        .editor-grid { 
+            display: grid; grid-template-columns: 350px 1fr; gap: 20px; 
+            width: 95%; max-width: 1200px; margin-top: 20px; 
         }
+
+        .controls { 
+            background: var(--card); padding: 20px; border-radius: 12px; 
+            border: 1px solid #333; height: fit-content;
+        }
+
+        .control-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; }
+        input, select { background: #000; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; }
+
+        /* Preview Window */
+        .preview-space { 
+            background: repeating-conic-gradient(#1a1a1a 0% 25%, #111 0% 50%) 50% / 40px 40px;
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid #333; min-height: 500px; position: relative;
+        }
+
+        #capture-target { padding: 40px; text-align: center; }
+        #target-img { max-width: 400px; display: block; margin: 0 auto 20px; }
+        #target-text { font-size: 3rem; font-weight: 900; letter-spacing: 2px; }
+
+        .btn-main { 
+            width: 100%; padding: 15px; background: var(--accent); color: white; 
+            border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
+        .progress-bar { 
+            width: 100%; height: 4px; background: #333; margin-top: 10px; 
+            border-radius: 2px; overflow: hidden; display: none;
+        }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.1s; }
     </style>
 </head>
 <body>
 
-    <div class="panel">
-        <div class="group">
-            <label>1. Upload Image</label>
-            <input type="file" id="fileIn" accept="image/*" onchange="loadFile(event)">
+<div class="ui-header">
+    <strong>12K RESOLVE TOOL:</strong> Transparent Image Sequence Generator
+</div>
+
+<div class="editor-grid">
+    <div class="controls">
+        <div class="control-group">
+            <label>Image Source</label>
+            <input type="file" id="imgFile" accept="image/*" onchange="previewImg(event)">
         </div>
-        <div class="group">
-            <label>2. Text Label</label>
-            <input type="text" id="textIn" value="ERROR_SYSTEM" oninput="update()">
+        <div class="control-group">
+            <label>Text Content</label>
+            <input type="text" id="txtInput" value="SYSTEM FAILURE" oninput="sync()">
         </div>
-        <div class="group">
-            <label>3. Flicker Target</label>
-            <select id="target" onchange="update()">
-                <option value="both">Both</option>
-                <option value="image">Image Only</option>
-                <option value="text">Text Only</option>
+        <div class="control-group">
+            <label>Duration (Seconds)</label>
+            <input type="number" id="duration" value="4" step="1">
+        </div>
+        <div class="control-group">
+            <label>Frame Rate (FPS)</label>
+            <select id="fps">
+                <option value="24">24 FPS</option>
+                <option value="30">30 FPS</option>
+                <option value="60">60 FPS</option>
             </select>
         </div>
-        <div class="group">
-            <label>4. Total Frames</label>
-            <input type="number" id="frameCount" value="8" min="2" max="24">
+        <div class="control-group">
+            <label>Flicker Intensity (0-100)</label>
+            <input type="range" id="intensity" min="1" max="50" value="15">
         </div>
-        <button onclick="generateSpritesheet()">🚀 GENERATE TRANSPARENT SPRITESHEET</button>
+
+        <button class="btn-main" onclick="exportSequence()">📦 EXPORT .ZIP SEQUENCE</button>
+        <div class="progress-bar" id="pBar"><div id="progress-fill"></div></div>
+        <p id="status" style="font-size: 12px; color: #888; text-align: center;"></p>
     </div>
 
-    <div id="render-target">
-        <div class="content-box" id="capture-box">
-            <img id="preview-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
-            <div id="preview-text">ERROR_SYSTEM</div>
+    <div class="preview-space">
+        <div id="capture-target">
+            <img id="target-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
+            <div id="target-text">SYSTEM FAILURE</div>
         </div>
     </div>
+</div>
 
-    <div id="sprite-preview-container">
-        <label>Final Spritesheet (Right click to save)</label>
-        <div id="canvas-result"></div>
-    </div>
+<script>
+    function previewImg(e) {
+        const reader = new FileReader();
+        reader.onload = () => document.getElementById('target-img').src = reader.result;
+        reader.readAsDataURL(e.target.files[0]);
+    }
 
-    <script>
-        function loadFile(event) {
-            const img = document.getElementById('preview-img');
-            img.src = URL.createObjectURL(event.target.files[0]);
-        }
+    function sync() {
+        document.getElementById('target-text').innerText = document.getElementById('txtInput').value;
+    }
 
-        function update() {
-            const text = document.getElementById('textIn').value;
-            const target = document.getElementById('target').value;
-            const imgEl = document.getElementById('preview-img');
-            const textEl = document.getElementById('preview-text');
-            
-            textEl.innerText = text;
+    async function exportSequence() {
+        const zip = new JSZip();
+        const folder = zip.folder("flicker_sequence");
+        const target = document.getElementById('capture-target');
+        const img = document.getElementById('target-img');
+        const txt = document.getElementById('target-text');
+        
+        const seconds = parseInt(document.getElementById('duration').value);
+        const fps = parseInt(document.getElementById('fps').value);
+        const totalFrames = seconds * fps;
+        const chance = parseInt(document.getElementById('intensity').value) / 100;
 
-            // Apply live preview animation
-            imgEl.classList.remove('flicker-active');
-            textEl.classList.remove('flicker-active');
+        const pBar = document.getElementById('pBar');
+        const pFill = document.getElementById('progress-fill');
+        const status = document.getElementById('status');
 
-            if(target === 'both' || target === 'image') imgEl.classList.add('flicker-active');
-            if(target === 'both' || target === 'text') textEl.classList.add('flicker-active');
-        }
+        pBar.style.display = 'block';
+        
+        for (let i = 0; i < totalFrames; i++) {
+            // Random Flicker Logic
+            const isOff = Math.random() < chance;
+            target.style.opacity = isOff ? "0" : "1";
 
-        async function generateSpritesheet() {
-            const box = document.getElementById('capture-box');
-            const frames = parseInt(document.getElementById('frameCount').value);
-            const target = document.getElementById('target').value;
-            const imgEl = document.getElementById('preview-img');
-            const textEl = document.getElementById('preview-text');
-            
-            const frameCanvases = [];
-            
-            // Stop live animation to take manual snapshots
-            imgEl.classList.remove('flicker-active');
-            textEl.classList.remove('flicker-active');
-
-            for (let i = 0; i < frames; i++) {
-                // Simulate flicker by randomly toggling opacity per frame
-                const opacity = Math.random() > 0.7 ? 0.1 : 1.0;
-                
-                if(target === 'both' || target === 'image') imgEl.style.opacity = opacity;
-                if(target === 'both' || target === 'text') textEl.style.opacity = opacity;
-
-                const canvas = await html2canvas(box, { backgroundColor: null, logging: false });
-                frameCanvases.push(canvas);
-            }
-
-            // Reset styles
-            imgEl.style.opacity = 1;
-            textEl.style.opacity = 1;
-            update();
-
-            // Create Master Spritesheet
-            const masterCanvas = document.createElement('canvas');
-            const ctx = masterCanvas.getContext('2d');
-            masterCanvas.width = frameCanvases[0].width * frames;
-            masterCanvas.height = frameCanvases[0].height;
-
-            frameCanvases.forEach((canvas, index) => {
-                ctx.drawImage(canvas, index * canvas.width, 0);
+            const canvas = await html2canvas(target, { 
+                backgroundColor: null,
+                scale: 2 // High quality for Resolve
             });
+            
+            const dataUrl = canvas.toDataURL("image/png").split(',')[1];
+            // Format name with leading zeros (e.g., frame_001.png)
+            const fileName = `frame_${String(i).padStart(3, '0')}.png`;
+            folder.file(fileName, dataUrl, {base64: true});
 
-            const resultContainer = document.getElementById('canvas-result');
-            resultContainer.innerHTML = '';
-            const finalImg = new Image();
-            finalImg.src = masterCanvas.toDataURL("image/png");
-            finalImg.style.maxWidth = "100%";
-            resultContainer.appendChild(finalImg);
-            document.getElementById('sprite-preview-container').style.display = 'block';
-
-            // Auto-download
-            const link = document.createElement('a');
-            link.download = 'flicker-spritesheet.png';
-            link.href = finalImg.src;
-            link.click();
+            // Update Progress
+            const percent = Math.round((i / totalFrames) * 100);
+            pFill.style.width = percent + "%";
+            status.innerText = `Rendering Frame ${i}/${totalFrames}...`;
         }
-    </script>
+
+        status.innerText = "Zipping sequence...";
+        const content = await zip.generateAsync({type:"blob"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = "flicker_animation_resolve.zip";
+        link.click();
+
+        target.style.opacity = "1";
+        status.innerText = "Done! Import frames into Resolve.";
+        pBar.style.display = 'none';
+    }
+</script>
 </body>
 </html>
